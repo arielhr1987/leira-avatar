@@ -20,14 +20,14 @@
  * @subpackage Leira_Avatar/admin
  * @author     Ariel <arielhr1987@gmail.com>
  */
-class Leira_Avatar_Admin {
+class Leira_Avatar_Admin{
 
 	/**
 	 * The ID of this plugin.
 	 *
 	 * @since    1.0.0
 	 * @access   private
-	 * @var      string    $plugin_name    The ID of this plugin.
+	 * @var      string $plugin_name The ID of this plugin.
 	 */
 	private $plugin_name;
 
@@ -36,21 +36,22 @@ class Leira_Avatar_Admin {
 	 *
 	 * @since    1.0.0
 	 * @access   private
-	 * @var      string    $version    The current version of this plugin.
+	 * @var      string $version The current version of this plugin.
 	 */
 	private $version;
 
 	/**
 	 * Initialize the class and set its properties.
 	 *
+	 * @param string $plugin_name The name of this plugin.
+	 * @param string $version     The version of this plugin.
+	 *
 	 * @since    1.0.0
-	 * @param      string    $plugin_name       The name of this plugin.
-	 * @param      string    $version    The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
 
 		$this->plugin_name = $plugin_name;
-		$this->version = $version;
+		$this->version     = $version;
 
 	}
 
@@ -59,22 +60,16 @@ class Leira_Avatar_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_styles() {
+	public function enqueue_styles( $hook ) {
 
 		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Leira_Avatar_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Leira_Avatar_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
+		 * Load croppie css
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array(), $this->version, 'all' );
-
+		if ( $hook === 'profile.php' ) {
+			wp_enqueue_style( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.css', array(), $this->version, 'all' );
+			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array(), $this->version, 'all' );
+		}
 	}
 
 	/**
@@ -82,22 +77,64 @@ class Leira_Avatar_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_scripts() {
+	public function enqueue_scripts( $hook ) {
 
 		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Leira_Avatar_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Leira_Avatar_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
+		 * Load croppie and admin scripts
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery' ), $this->version, false );
+		if ( $hook === 'profile.php' ) {
+			add_thickbox();
+			wp_enqueue_script( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.min.js', array( 'jquery' ), $this->version, false );
+			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery' ), $this->version, false );
+		}
 
+	}
+
+	/**
+	 * Remove the description under the profile picture
+	 *
+	 * @param string  $description
+	 * @param WP_User $user
+	 *
+	 * @return string
+	 */
+	public function remove_avatar_description( $description, $user ) {
+		if ( defined( 'IS_PROFILE_PAGE' ) && IS_PROFILE_PAGE ) {
+			$description = '';
+			$description = sprintf(
+			/* translators: %s: Gravatar URL. */
+				__( '<a href="%s" class="thickbox">Change</a>.' ),
+				__( '?modal=false&TB_inline&inlineId=profile-page' )
+			);
+		}
+
+		return $description;
+	}
+
+	public function add_modal() {
+	    return;
+		?>
+        <div id="exampleModalLive" class="fade leira-avatar-modal show" tabindex="-1" role="dialog" aria-labelledby="exampleModalLiveLabel" style="display: block;" aria-modal="true">
+            <div class="leira-avatar-modal-dialog" role="document">
+                <div class="leira-avatar-modal-content">
+                    <div class="leira-avatar-modal-header">
+                        <h5 class="leira-avatar-modal-title" id="exampleModalLiveLabel">Modal title</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <div class="leira-avatar-modal-body">
+                        <p>Woohoo, you're reading this text in a modal!</p>
+                    </div>
+                    <div class="leira-avatar-modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Save changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+		<?php
 	}
 
 }

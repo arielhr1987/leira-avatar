@@ -20,7 +20,7 @@
  * @subpackage Leira_Avatar/includes
  * @author     Ariel <arielhr1987@gmail.com>
  */
-class Leira_Avatar_Deactivator {
+class Leira_Avatar_Deactivator{
 
 	/**
 	 * Short Description. (use period)

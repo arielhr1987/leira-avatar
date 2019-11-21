@@ -171,10 +171,16 @@ class Leira_Avatar{
 		if ( is_admin() ) {
 
 			$plugin_admin = new Leira_Avatar_Admin( $this->get_plugin_name(), $this->get_version() );
+
 			$this->loader->set( 'admin', $plugin_admin );
 
 			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+
 			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+
+			$this->loader->add_filter( 'user_profile_picture_description', $plugin_admin, 'remove_avatar_description', 10, 2 );
+
+			$this->loader->add_action( 'admin_footer-profile.php', $plugin_admin, 'add_modal' );
 
 		}
 	}
@@ -188,9 +194,11 @@ class Leira_Avatar{
 	private function define_public_hooks() {
 
 		$plugin_public = new Leira_Avatar_Public( $this->get_plugin_name(), $this->get_version() );
+
 		$this->loader->set( 'public', $plugin_public );
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
+
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
 	}
