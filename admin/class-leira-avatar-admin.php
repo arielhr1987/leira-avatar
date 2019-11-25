@@ -66,7 +66,7 @@ class Leira_Avatar_Admin{
 		 * Load croppie css
 		 */
 
-		if ( $hook === 'profile.php' ) {
+		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
 			wp_enqueue_style( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.css', array(), $this->version, 'all' );
 			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array(), $this->version, 'all' );
 		}
@@ -83,7 +83,7 @@ class Leira_Avatar_Admin{
 		 * Load croppie and admin scripts
 		 */
 
-		if ( $hook === 'profile.php' ) {
+		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
 			add_thickbox();
 			wp_enqueue_script( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.min.js', array( 'jquery' ), $this->version, false );
 			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery' ), $this->version, false );
@@ -110,31 +110,6 @@ class Leira_Avatar_Admin{
 		}
 
 		return $description;
-	}
-
-	public function add_modal() {
-	    return;
-		?>
-        <div id="exampleModalLive" class="fade leira-avatar-modal show" tabindex="-1" role="dialog" aria-labelledby="exampleModalLiveLabel" style="display: block;" aria-modal="true">
-            <div class="leira-avatar-modal-dialog" role="document">
-                <div class="leira-avatar-modal-content">
-                    <div class="leira-avatar-modal-header">
-                        <h5 class="leira-avatar-modal-title" id="exampleModalLiveLabel">Modal title</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <div class="leira-avatar-modal-body">
-                        <p>Woohoo, you're reading this text in a modal!</p>
-                    </div>
-                    <div class="leira-avatar-modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary">Save changes</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-		<?php
 	}
 
 }

@@ -1,7 +1,7 @@
 (function ($) {
     'use strict';
 
-    var LeiraAvatar = {
+    window.LeiraAvatar = {
 
         /**
          * Croppie instance
@@ -9,91 +9,116 @@
         croppie: null,
 
         /**
-         * Uploader
+         * Croppie options
+         */
+        croppieOptions: {
+            //enableExif: true,
+            showZoomer: false,
+            viewport: {
+                width: 200,
+                height: 200,
+                type: 'square'
+            },
+            boundary: {
+                height: 500 * 2 / 3
+            }
+        },
+
+        /**
+         * Uploader. The input file
          */
         uploader: null,
 
         /**
-         *
+         * The image selected by the user
+         */
+        img: null,
+
+        /**
+         * Modal width
          */
         width: 500,
 
         /**
-         *
+         * Modal height
          */
         height: 360,
+
+        /**
+         * Check if bootstrap is installed in the page.
+         */
+        isBootstrapDefined: function () {
+            return typeof window.bootstrap !== 'undefined';
+        },
 
         /**
          *
          */
         init: function () {
 
-            /**
-             * Add modal content div
-             */
-            var modalContent = [
-                '<div class="" id="leira-avatar-modal-content" style="display: none">',
-                '<div id="leira-avatar-croppie">',
-                '</div>',
-                '<input id="leira-avatar-uploader" type="file" accept="image/*" style="display: none"></div>',
-                '</div>'
-            ].join('\n');
-            $(document.body).append(modalContent);
+            $(window).trigger('leira-avatar.init');
 
             /**
              * Create croppie instance
              */
-            this.croppie = $('#leira-avatar-croppie').croppie({
-                enableExif: true,
-                showZoomer: false,
-                viewport: {
-                    width: 200,
-                    height: 200,
-                    type: 'square'
-                },
-                boundary: {
-                    width: 500,
-                    height: 360
-                }
-            });
+            this.croppie = $('#leira-avatar-croppie').croppie(LeiraAvatar.croppieOptions);
 
+            $(document).
+            /**
+             * Handle click on avatar. Trigger input file click to open browser select image dialog
+             */
+            on('click', '.user-profile-picture img.avatar, .leira-avatar-open-editor', function () {
+                $('#leira-avatar-uploader').click();
+            }).
             /**
              * Bind file input change
              */
-            $('#leira-avatar-uploader').on('change', function () {
+            on('change', '#leira-avatar-uploader', function () {
                 LeiraAvatar.readFile(this);
+            }).
+            /**
+             * Save the image
+             */
+            on('click', '.leira-avatar-save', function () {
+                LeiraAvatar.save();
             });
 
-            /**
-             * Handle click on avatar
-             */
-            $(document).on('click', '.user-profile-picture img.avatar', function () {
-                $('#leira-avatar-uploader').click();
-            });
+            if (!LeiraAvatar.isBootstrapDefined()) {
+                /**
+                 * Close modal
+                 */
+                $(document).on('click', '#leira-avatar-modal .close, .modal-backdrop', function () {
+                    LeiraAvatar.hideModal();
+                });
+            }
 
             /**
-             * Save
+             * Resize window
              */
-            // $('.upload-result').on('click', function (ev) {
-            //     LeiraAvatar.uploader.croppie('result', {
-            //         type: 'canvas',
-            //         size: 'viewport'
-            //     }).then(function (resp) {
-            //         // popupResult({
-            //         //     src: resp
-            //         // });
-            //     });
-            // });
-
-            LeiraAvatar.position();
-
             $(window).resize(function () {
-                LeiraAvatar.position();
-            })
+                LeiraAvatar.updateCroppie();
+            });
+
+            /**
+             * BS compatibility
+             */
+            $('#leira-avatar-modal').on('shown.bs.modal', function () {
+                LeiraAvatar.updateCroppie();
+            });
         },
 
         /**
-         *
+         * Update croppie position
+         */
+        updateCroppie: function () {
+            if (LeiraAvatar.img) {
+                //only update if url is bind to croppie
+                LeiraAvatar.croppie.croppie('bind');
+            }
+        },
+
+        /**
+         * Read the image selected by the user and open croppie modal
          * @param input
          */
         readFile: function (input) {
@@ -102,16 +127,17 @@
                 var reader = new FileReader();
 
                 reader.onload = function (e) {
-                    //$('.upload-demo').addClass('ready');
 
                     LeiraAvatar.showModal();
-                    //LeiraAvatar.croppie.toggle();
+
+                    LeiraAvatar.img = e.target.result;
                     LeiraAvatar.croppie.croppie('bind', {
                         url: e.target.result
                     }).then(function () {
-                        console.log('jQuery bind complete');
+                        //console.log('jQuery bind complete');
                     });
 
+                    //$(window).resize();
                 };
                 reader.readAsDataURL(input.files[0]);
 
@@ -121,45 +147,84 @@
         },
 
         /**
-         * Show cropper in the modal
+         * Save the image
          */
-        showModal: function () {
-            /**
-             * Open modal
-             */
-            var title = "Change your profile picture";
-            var url = '?TB_inline&inlineId=leira-avatar-modal-content&width=' + LeiraAvatar.width + '&height=' + LeiraAvatar.height;
-            tb_show(title, url, false);
-            return false;
+        save: function () {
+            LeiraAvatar.croppie.croppie('result', {
+                type: 'canvas',
+                size: 'viewport'
+            }).then(function (resp) {
+                var ajaxurl = window.ajaxurl || 'asdasd';
+                var data = {
+                    action: 'leira-avatar-save',
+                    image: resp
+                };
+                var user = $('input[name="user_id"]').val();
+                if (user) {
+                    //only add user if present. The admin is editing some user avatar
+                    data.user = user;
+                }
+                $.ajax({
+                    url: ajaxurl,
+                    type: "POST",
+                    dataType: "json",
+                    data: data
+                }).done(function (data, status, xhr) {
+                    //we need to update the image url
+                    if (data.result && data.url) {
+                        //
+                        $(window).trigger('leira-avatar.change', data);
+                        $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
+                    }
+                }).always(function () {
+                    LeiraAvatar.hideModal();
+                });
+            });
         },
 
         /**
-         *
+         * Show cropper in the modal
          */
-        position: function () {
-            var width = $(window).width(),
-                //H = $(window).height() - ((500 < width) ? 60 : 20),
-                H = 400,
-                W = (500 < width) ? 500 : width - 20;
+        toggleModal: function (visible) {
 
-            LeiraAvatar.width = W;
-            LeiraAvatar.height = H;
-
-            var tbWindow = $('#TB_window');
-
-            if (tbWindow.length) {
-                tbWindow.width(W).height(H);
-                //$('#TB_ajaxContent').width(W).height(H);
-                tbWindow.css({
-                    'margin-left': '-' + parseInt((W / 2), 10) + 'px'
-                });
-                if (typeof document.body.style.maxWidth !== 'undefined') {
-                    // var top = ($(window).height() - 400) / 2;
-                    // tbWindow.css({
-                    //     'top': top + 'px',
-                    //     'margin-top': '0'
-                    // });
+            if (!LeiraAvatar.isBootstrapDefined()) {
+                /**
+                 * Open modal
+                 */
+                $(document.body).toggleClass('modal-open', visible);//invalidate page scroll
+                var backdrop = $('.modal-backdrop');
+                if (backdrop.length > 0) {
+                    //backdrop exist
+                    if (!visible) {
+                        backdrop.remove();
+                    }
+                } else {
+                    if (visible) {
+                        $(document.body).append('<div class="modal-backdrop fade show"></div>')
+                    }
                 }
+                $('#leira-avatar-modal').toggle(visible);
+            }
+        },
+
+        /**
+         * Show modal
+         */
+        showModal: function () {
+            if (LeiraAvatar.isBootstrapDefined()) {
+                $('#leira-avatar-modal').modal('show')
+            } else {
+                LeiraAvatar.toggleModal(true)
+            }
+        },
+        /**
+         * Hide modal
+         */
+        hideModal: function () {
+            if (LeiraAvatar.isBootstrapDefined()) {
+                $('#leira-avatar-modal').modal('hide')
+            } else {
+                LeiraAvatar.toggleModal(false)
             }
         }
     };

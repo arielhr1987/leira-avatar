@@ -180,8 +180,6 @@ class Leira_Avatar{
 
 			$this->loader->add_filter( 'user_profile_picture_description', $plugin_admin, 'remove_avatar_description', 10, 2 );
 
-			$this->loader->add_action( 'admin_footer-profile.php', $plugin_admin, 'add_modal' );
-
 		}
 	}
 
@@ -201,6 +199,17 @@ class Leira_Avatar{
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
+		$this->loader->add_action( 'wp_ajax_leira-avatar-save', $plugin_public, 'save_avatar' );
+
+		$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'get_avatar_url', 5, 5 );
+
+//		$this->loader->add_filter( 'pre_get_avatar', $plugin_public, 'add_avatar_class', 10, 2 );
+
+		$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6);
+
+		$this->loader->add_action( 'admin_footer-profile.php', $plugin_public, 'add_modal' );
+
+		$this->loader->add_action( 'admin_footer-user-edit.php', $plugin_public, 'add_modal' );
 	}
 
 	/**
