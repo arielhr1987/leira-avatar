@@ -26,6 +26,8 @@
  * @package    Leira_Avatar
  * @subpackage Leira_Avatar/includes
  * @author     Ariel <arielhr1987@gmail.com>
+ *
+ * @property Leira_Avatar_Core $core
  */
 class Leira_Avatar{
 
@@ -128,6 +130,11 @@ class Leira_Avatar{
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-leira-avatar-i18n.php';
 
+		/**
+		 * The class responsible core functions.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-leira-avatar-core.php';
+
 		if ( is_admin() ) {
 			/**
 			 * The class responsible for defining all actions that occur in the admin area.
@@ -195,21 +202,29 @@ class Leira_Avatar{
 
 		$this->loader->set( 'public', $plugin_public );
 
+		$plugin_core = new Leira_Avatar_Core();
+
+		$this->loader->set( 'core', $plugin_core );
+
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
-		$this->loader->add_action( 'wp_ajax_leira-avatar-save', $plugin_public, 'save_avatar' );
+		//$this->loader->add_action( 'wp_ajax_leira-avatar-save', $plugin_public, 'save_avatar' );
 
-		$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'get_avatar_url', 5, 5 );
+		//$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'get_avatar_url', 5, 5 );
 
 //		$this->loader->add_filter( 'pre_get_avatar', $plugin_public, 'add_avatar_class', 10, 2 );
 
-		$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6);
+		//$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6 );
 
 		$this->loader->add_action( 'admin_footer-profile.php', $plugin_public, 'add_modal' );
 
 		$this->loader->add_action( 'admin_footer-user-edit.php', $plugin_public, 'add_modal' );
+
+		$this->loader->add_action( 'wp_ajax_bp_avatar_upload', $plugin_public, 'bp_avatar_ajax_upload' );
+
+		$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'bp_core_get_avatar_data_url_filter', 10, 3 );
 	}
 
 	/**

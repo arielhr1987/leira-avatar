@@ -107,6 +107,11 @@ $modal-transition: transform .3s ease-out !default;
     overflow: hidden;
     padding: 0;
     border: 0;
+
+    #crop{
+      width: 100%;
+      height: auto;
+    }
   }
 
   .modal-footer {

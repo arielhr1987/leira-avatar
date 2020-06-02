@@ -68,7 +68,7 @@ class Leira_Avatar_Admin{
 
 		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
 			wp_enqueue_style( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.css', array(), $this->version, 'all' );
-			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array(), $this->version, 'all' );
+			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array('jcrop'), $this->version, 'all' );
 		}
 	}
 
@@ -84,9 +84,9 @@ class Leira_Avatar_Admin{
 		 */
 
 		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
-			add_thickbox();
+			//add_thickbox();
 			wp_enqueue_script( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.min.js', array( 'jquery' ), $this->version, false );
-			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery' ), $this->version, false );
+			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery', 'jcrop' ), $this->version, false );
 		}
 
 	}
@@ -104,7 +104,7 @@ class Leira_Avatar_Admin{
 			$description = '';
 			$description = sprintf(
 			/* translators: %s: Gravatar URL. */
-				__( '<a href="%s" class="thickbox">Change</a>.' ),
+				__( '<a href="javascript:void(0);" class="" onclick="alert()">Change</a>.' ),
 				__( '?modal=false&TB_inline&inlineId=profile-page' )
 			);
 		}

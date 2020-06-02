@@ -118,6 +118,7 @@ class Leira_Avatar_Public{
                         </button>
                     </div>
                     <div class="modal-body">
+                        <img id="crop" style="width: 100%; height: auto;"/>
                         <div id="leira-avatar-croppie"></div>
                         <input id="leira-avatar-uploader" type="file" accept="image/*" style="display: none">
                     </div>
@@ -312,5 +313,206 @@ class Leira_Avatar_Public{
 
 		return $avatar;
 	}
+
+	/**
+	 * Ajax upload an avatar.
+	 *
+	 * @return string|null A JSON object containing success data if the upload succeeded
+	 *                     error message otherwise.
+	 * @since 2.3.0
+	 *
+	 */
+	function bp_avatar_ajax_upload() {
+		$t = 0;
+		if ( ! (bool) ( 'POST' === strtoupper( $_SERVER['REQUEST_METHOD'] ) ) ) {
+			wp_die();
+		}
+
+		// Check the nonce.
+		//check_admin_referer( 'bp-uploader' );
+
+		$upload = leira_avatar()->core->upload( $_FILES );
+
+		// In case of an error, stop the process and display a feedback to the user.
+		if ( ! empty( $upload['error'] ) ) {
+			/* translators: %s: the upload error message */
+			//bp_core_add_message( sprintf( __( 'Upload Failed! Error was: %s', 'buddypress' ), $upload['error'] ), 'error' );
+
+			return false;
+		}
+
+		// Maybe resize.
+		leira_avatar()->core->generate();
+
+		return;
+//		$bp->avatar_admin->original = $avatar_attachment->upload( $file, $upload_dir_filter );
+//
+//		// Init the BuddyPress parameters.
+//		$bp_params = array();
+//
+//		// We need it to carry on.
+//		if ( ! empty( $_POST['bp_params'] ) ) {
+//			$bp_params = $_POST['bp_params'];
+//		} else {
+//			wp_send_json_error();
+//		}
+//
+//		$bp                             = buddypress();
+//		$bp_params['upload_dir_filter'] = '';
+//		$needs_reset                    = array();
+//
+//		if ( 'user' === $bp_params['object'] ) {
+//			$bp_params['upload_dir_filter'] = 'bp_members_avatar_upload_dir';
+//
+//			if ( ! bp_displayed_user_id() && ! empty( $bp_params['item_id'] ) ) {
+//				$needs_reset            = array( 'key' => 'displayed_user', 'value' => $bp->displayed_user );
+//				$bp->displayed_user->id = $bp_params['item_id'];
+//			}
+//		}
+//
+//		if ( ! isset( $bp->avatar_admin ) ) {
+//			$bp->avatar_admin = new stdClass();
+//		}
+//
+//		/**
+//		 * The BuddyPress upload parameters is including the Avatar UI Available width,
+//		 * add it to the avatar_admin global for a later use.
+//		 */
+//		if ( isset( $bp_params['ui_available_width'] ) ) {
+//			$bp->avatar_admin->ui_available_width = (int) $bp_params['ui_available_width'];
+//		}
+//
+//		// Upload the avatar.
+//		$avatar = bp_core_avatar_handle_upload( $_FILES, $bp_params['upload_dir_filter'] );
+//
+//		// Reset objects.
+//		if ( ! empty( $needs_reset ) ) {
+//			if ( ! empty( $needs_reset['component'] ) ) {
+//				$bp->{$needs_reset['component']}->{$needs_reset['key']} = $needs_reset['value'];
+//			} else {
+//				$bp->{$needs_reset['key']} = $needs_reset['value'];
+//			}
+//		}
+//
+//		// Init the feedback message.
+//		$feedback_message = false;
+//
+//		if ( ! empty( $bp->template_message ) ) {
+//			$feedback_message = $bp->template_message;
+//
+//			// Remove template message.
+//			$bp->template_message      = false;
+//			$bp->template_message_type = false;
+//
+//			@setcookie( 'bp-message', false, time() - 1000, COOKIEPATH, COOKIE_DOMAIN, is_ssl() );
+//			@setcookie( 'bp-message-type', false, time() - 1000, COOKIEPATH, COOKIE_DOMAIN, is_ssl() );
+//		}
+//
+//		if ( empty( $avatar ) ) {
+//			// Default upload error.
+//			$message = __( 'Upload failed.', 'buddypress' );
+//
+//			// Use the template message if set.
+//			if ( ! empty( $feedback_message ) ) {
+//				$message = $feedback_message;
+//			}
+//
+//			// Upload error reply.
+//			bp_attachments_json_response( false, $is_html4, array(
+//				'type'    => 'upload_error',
+//				'message' => $message,
+//			) );
+//		}
+//
+//		if ( empty( $bp->avatar_admin->image->file ) ) {
+//			bp_attachments_json_response( false, $is_html4 );
+//		}
+//
+//		$uploaded_image = @getimagesize( $bp->avatar_admin->image->file );
+//
+//		// Set the name of the file.
+//		$name       = $_FILES['file']['name'];
+//		$name_parts = pathinfo( $name );
+//		$name       = trim( substr( $name, 0, - ( 1 + strlen( $name_parts['extension'] ) ) ) );
+//
+//		// Finally return the avatar to the editor.
+//		bp_attachments_json_response( true, $is_html4, array(
+//			'name'     => $name,
+//			'url'      => $bp->avatar_admin->image->url,
+//			'width'    => $uploaded_image[0],
+//			'height'   => $uploaded_image[1],
+//			'feedback' => $feedback_message,
+//		) );
+	}
+
+
+	/**
+	 * Filter {@link get_avatar_url()} to use the BuddyPress user avatar URL.
+	 *
+	 * @param string $url          The URL of the avatar.
+	 * @param mixed  $id_or_email  The Gravatar to retrieve. Accepts a user_id, gravatar md5 hash,
+	 *                             user email, WP_User object, WP_Post object, or WP_Comment object.
+	 * @param array  $args         Arguments passed to get_avatar_data(), after processing.
+	 *
+	 * @return string
+	 * @since 2.9.0
+	 *
+	 */
+	public function bp_core_get_avatar_data_url_filter( $url, $id_or_email, $args ) {
+
+		/**
+		 * System forces to generate avatar with specific format.
+		 * This fix discussion settings repeated images
+		 */
+		$force_default = isset( $args['force_default'] ) ? $args['force_default'] : false;
+		if ( $force_default ) {
+			/**
+			 * WP request an specific avatar type
+			 * We are in Discussion setting page
+			 */
+			return $url;
+		}
+
+		$user = null;
+
+		// Ugh, hate duplicating code; process the user identifier.
+		if ( is_numeric( $id_or_email ) ) {
+			$user = get_user_by( 'id', absint( $id_or_email ) );
+		} elseif ( $id_or_email instanceof WP_User ) {
+			// User Object
+			$user = $id_or_email;
+		} elseif ( $id_or_email instanceof WP_Post ) {
+			// Post Object
+			$user = get_user_by( 'id', (int) $id_or_email->post_author );
+		} elseif ( $id_or_email instanceof WP_Comment ) {
+			if ( ! empty( $id_or_email->user_id ) ) {
+				$user = get_user_by( 'id', (int) $id_or_email->user_id );
+			}
+		} elseif ( is_email( $id_or_email ) ) {
+			$user = get_user_by( 'email', $id_or_email );
+		}
+
+		// No user, so bail.
+		if ( false === $user instanceof WP_User ) {
+			return $url;
+		}
+
+		// Use the 'full' type if size is larger than thumb's width.
+		$size = (int) $args['size'];
+		if ( (int) $args['size'] > 50 ) {
+			$size = 'full';
+		}
+
+		// Get the BuddyPress avatar URL.
+		$core = leira_avatar()->core;
+		if ( $bp_avatar = $core->avatar( $user->ID, $size ) ) {
+			{
+				return $bp_avatar;
+			}
+		}
+
+		return $url;
+	}
+
 
 }

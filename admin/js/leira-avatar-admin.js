@@ -64,24 +64,24 @@
             this.croppie = $('#leira-avatar-croppie').croppie(LeiraAvatar.croppieOptions);
 
             $(document).
-            /**
-             * Handle click on avatar. Trigger input file click to open browser select image dialog
-             */
-            on('click', '.user-profile-picture img.avatar, .leira-avatar-open-editor', function () {
-                $('#leira-avatar-uploader').click();
-            }).
-            /**
-             * Bind file input change
-             */
-            on('change', '#leira-avatar-uploader', function () {
-                LeiraAvatar.readFile(this);
-            }).
-            /**
-             * Save the image
-             */
-            on('click', '.leira-avatar-save', function () {
-                LeiraAvatar.save();
-            });
+                /**
+                 * Handle click on avatar. Trigger input file click to open browser select image dialog
+                 */
+                on('click', '.user-profile-picture img.avatar, .leira-avatar-open-editor', function () {
+                    $('#leira-avatar-uploader').click();
+                }).
+                /**
+                 * Bind file input change
+                 */
+                on('change', '#leira-avatar-uploader', function () {
+                    LeiraAvatar.readFile(this);
+                }).
+                /**
+                 * Save the image
+                 */
+                on('click', '.leira-avatar-save', function () {
+                    LeiraAvatar.save();
+                });
 
             if (!LeiraAvatar.isBootstrapDefined()) {
                 /**
@@ -124,8 +124,8 @@
         readFile: function (input) {
 
             if (input.files && input.files[0]) {
+                LeiraAvatar.file = input.files[0];
                 var reader = new FileReader();
-
                 reader.onload = function (e) {
 
                     LeiraAvatar.showModal();
@@ -151,32 +151,40 @@
          */
         save: function () {
             LeiraAvatar.croppie.croppie('result', {
-                type: 'canvas',
+                type: 'blob',
                 size: 'viewport'
             }).then(function (resp) {
+                var file = new File([resp], LeiraAvatar.file.name, {
+                    type: resp.type,
+                    lastModified: new Date()
+                });
+
                 var ajaxurl = window.ajaxurl || 'asdasd';
-                var data = {
-                    action: 'leira-avatar-save',
-                    image: resp
-                };
+                var data = new FormData();
+                data.append('action', 'bp_avatar_upload')
+                data.append('file', file);
+                // data.append('file', LeiraAvatar.file);
                 var user = $('input[name="user_id"]').val();
                 if (user) {
                     //only add user if present. The admin is editing some user avatar
-                    data.user = user;
+                    data.append('user', user);
                 }
                 $.ajax({
                     url: ajaxurl,
                     type: "POST",
-                    dataType: "json",
-                    data: data
-                }).done(function (data, status, xhr) {
-                    //we need to update the image url
-                    if (data.result && data.url) {
-                        //
-                        $(window).trigger('leira-avatar.change', data);
-                        $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
-                    }
-                }).always(function () {
+                    data: data,
+                    //dataType: "json",
+                    processData: false,
+                    contentType: false,
+                })
+                    .done(function (data, status, xhr) {
+                        //we need to update the image url
+                        if (data.result && data.url) {
+                            //
+                            $(window).trigger('leira-avatar.change', data);
+                            $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
+                        }
+                    }).always(function () {
                     LeiraAvatar.hideModal();
                 });
             });
