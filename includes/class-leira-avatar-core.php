@@ -378,15 +378,15 @@ class Leira_Avatar_Core{
 		 */
 		$editor->set_quality( 90 );
 
+		/**
+		 * Check image rotation
+		 */
 		$angles = array(
 			3 => 180,
 			6 => - 90,
 			8 => 90,
 		);
 
-		/**
-		 * Check image rotation
-		 */
 		if ( isset( $avatar_data['meta']['orientation'] ) && isset( $angles[ $avatar_data['meta']['orientation'] ] ) ) {
 			//We need to rotate the image
 			$rotated = $editor->rotate( $angles[ $avatar_data['meta']['orientation'] ] );

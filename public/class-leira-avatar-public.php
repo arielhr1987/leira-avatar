@@ -253,6 +253,7 @@ class Leira_Avatar_Public{
 	 * @param $id_or_email
 	 *
 	 * @return mixed
+	 * @since 1.0.0
 	 */
 	public function get_avatar_url( $url, $id_or_email ) {
 		$user_id = 0;
@@ -462,13 +463,13 @@ class Leira_Avatar_Public{
 
 		/**
 		 * System forces to generate avatar with specific format.
-		 * This fix discussion settings repeated images
+		 * This fix discussion settings repeated images.
 		 */
 		$force_default = isset( $args['force_default'] ) ? $args['force_default'] : false;
 		if ( $force_default ) {
 			/**
-			 * WP request an specific avatar type
-			 * We are in Discussion setting page
+			 * WP request an specific avatar type.
+			 * We are in Discussion setting page.
 			 */
 			return $url;
 		}
@@ -503,12 +504,10 @@ class Leira_Avatar_Public{
 			$size = 'full';
 		}
 
-		// Get the BuddyPress avatar URL.
+		// Get user custom avatar URL.
 		$core = leira_avatar()->core;
 		if ( $bp_avatar = $core->avatar( $user->ID, $size ) ) {
-			{
-				return $bp_avatar;
-			}
+			return $bp_avatar;
 		}
 
 		return $url;

@@ -60,13 +60,13 @@ class Leira_Avatar_Admin{
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_styles( $hook ) {
+	public function enqueue_styles( $page ) {
 
 		/**
 		 * Load croppie css
 		 */
 
-		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
+		if ( $page === 'profile.php' || $page === 'user-edit.php' ) {
 			wp_enqueue_style( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.css', array(), $this->version, 'all' );
 			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array('jcrop'), $this->version, 'all' );
 		}
@@ -77,13 +77,13 @@ class Leira_Avatar_Admin{
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_scripts( $hook ) {
+	public function enqueue_scripts( $page ) {
 
 		/**
 		 * Load croppie and admin scripts
 		 */
 
-		if ( $hook === 'profile.php' || $hook === 'user-edit.php' ) {
+		if ( $page === 'profile.php' || $page === 'user-edit.php' ) {
 			//add_thickbox();
 			wp_enqueue_script( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.min.js', array( 'jquery' ), $this->version, false );
 			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery', 'jcrop' ), $this->version, false );
