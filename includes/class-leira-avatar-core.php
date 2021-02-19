@@ -569,32 +569,34 @@ class Leira_Avatar_Core{
 		$avatar_size       = ( 'full' == $size ) ? '-bpfull' : '-bpthumb';
 		$avatar_url        = '';
 
-		// Open directory.
-		if ( $av_dir = opendir( $avatar_folder_dir ) ) {
+		if(file_exists($avatar_folder_dir)){
+			// Open directory.
+			if ( $av_dir = opendir( $avatar_folder_dir ) ) {
 
-			// Stash files in an array once to check for one that matches.
-			$avatar_files = array();
-			while( false !== ( $avatar_file = readdir( $av_dir ) ) ){
-				// Only add files to the array (skip directories).
-				if ( 2 < strlen( $avatar_file ) ) {
-					$avatar_files[] = $avatar_file;
+				// Stash files in an array once to check for one that matches.
+				$avatar_files = array();
+				while( false !== ( $avatar_file = readdir( $av_dir ) ) ){
+					// Only add files to the array (skip directories).
+					if ( 2 < strlen( $avatar_file ) ) {
+						$avatar_files[] = $avatar_file;
+					}
 				}
-			}
 
-			// Check for array.
-			if ( 0 < count( $avatar_files ) ) {
+				// Check for array.
+				if ( 0 < count( $avatar_files ) ) {
 
-				// Check for current avatar.
-				foreach ( $avatar_files as $key => $value ) {
-					if ( strpos( $value, $avatar_size ) !== false ) {
-						$avatar_url = $avatar_folder_url . '/' . $avatar_files[ $key ];
+					// Check for current avatar.
+					foreach ( $avatar_files as $key => $value ) {
+						if ( strpos( $value, $avatar_size ) !== false ) {
+							$avatar_url = $avatar_folder_url . '/' . $avatar_files[ $key ];
+						}
 					}
 				}
 			}
-		}
 
-		// Close the avatar directory.
-		closedir( $av_dir );
+			// Close the avatar directory.
+			closedir( $av_dir );
+		}
 
 		return apply_filters( 'leira_avatar_user_avatar_url', $avatar_url );
 	}

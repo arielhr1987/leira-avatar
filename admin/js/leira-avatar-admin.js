@@ -176,15 +176,14 @@
                     //dataType: "json",
                     processData: false,
                     contentType: false,
-                })
-                    .done(function (data, status, xhr) {
-                        //we need to update the image url
-                        if (data.result && data.url) {
-                            //
-                            $(window).trigger('leira-avatar.change', data);
-                            $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
-                        }
-                    }).always(function () {
+                }).done(function (data, status, xhr) {
+                    //we need to update the image url
+                    if (data.result && data.url) {
+                        //
+                        $(window).trigger('leira-avatar.change', data);
+                        $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
+                    }
+                }).always(function () {
                     LeiraAvatar.hideModal();
                 });
             });
