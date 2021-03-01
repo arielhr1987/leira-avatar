@@ -220,7 +220,7 @@ class Leira_Avatar{
 
 //		$this->loader->add_filter( 'pre_get_avatar', $plugin_public, 'add_avatar_class', 10, 2 );
 
-		//$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6 );
+		$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6 );
 
 		$this->loader->add_action( 'wp_ajax_leira_avatar_upload', $plugin_public, 'avatar_ajax_upload' );
 

@@ -604,7 +604,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string The user avatar url for the given size or an empty string if not found
 	 * @access   public
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	public function avatar( $user_id = '', $size = 'full' ) {
 
@@ -614,11 +614,7 @@ class Leira_Avatar_Core{
 		}
 
 		//validate size
-		if ( is_integer( $size ) ) {
-			$size = $size > $this->get_avatar_size( 'thumb' ) ? 'full' : 'thumb';
-		}
-		$size = strtolower( $size );
-		$size = $size == 'full' ? 'full' : 'thumb';
+		$size = $this->get_avatar_type( $size );
 
 		/**
 		 * Check if cached
@@ -696,7 +692,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string
 	 * @access   public
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	public function get_uploads_dir() {
 		$dir = '';
@@ -713,7 +709,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string
 	 * @access   public
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	public function get_uploads_url() {
 		$url = '';
@@ -737,7 +733,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string
 	 * @access   public
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	public function get_user_avatar_folder_dir( $user_id = '' ) {
 
@@ -753,7 +749,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string
 	 * @access   public
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	public function get_user_avatar_folder_url( $user_id ) {
 
@@ -769,7 +765,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @return string
 	 * @access   protected
-	 * @since 1.0.0
+	 * @since    1.0.0
 	 */
 	protected function get_user_avatar_subdir( $user_id ) {
 		$user_id = (int) $user_id;
@@ -796,7 +792,8 @@ class Leira_Avatar_Core{
 	 * @param string $size [full|thumb]
 	 *
 	 * @return integer The size in pixels for the given $size
-	 * @since 1.0.0
+	 * @since  1.0.0
+	 * @access public
 	 */
 	public function get_avatar_size( $size ) {
 
@@ -809,6 +806,25 @@ class Leira_Avatar_Core{
 		$value        = $avatar_sizes[ $size ];
 
 		return apply_filters( "leira_avatar_get_{$size}_image_size", $value );
+	}
+
+	/**
+	 * Given an integer size determine the avatar type [full|thumb]
+	 *
+	 * @param integer $size
+	 *
+	 * @return string
+	 * @since  1.0.0
+	 * @access public
+	 */
+	public function get_avatar_type( $size ) {
+		if ( is_integer( $size ) ) {
+			$size = $size > $this->get_avatar_size( 'thumb' ) ? 'full' : 'thumb';
+		}
+		$size = strtolower( $size );
+		$size = $size == 'full' ? 'full' : 'thumb';
+
+		return $size;
 	}
 
 	/**

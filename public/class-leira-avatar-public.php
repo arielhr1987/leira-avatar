@@ -144,178 +144,45 @@ class Leira_Avatar_Public{
 	}
 
 	/**
-	 * Save the image to attachment and add it to the user metadata
+	 * Add leira avatar classes to image tag.
 	 *
-	 * @deprecated
-	 */
-	public function save_avatar() {
-		$url = false;
-		if ( is_user_logged_in() ) {
-
-			$user = isset( $_POST['user'] ) ? sanitize_text_field( $_POST['user'] ) : false;
-			if ( current_user_can( 'manage_options' ) && $user != get_current_user_id() ) {
-				//admin is editing other user
-			} else {
-				//a user is editing his profile picture
-				$user = get_current_user_id();
-			}
-
-			$data = isset( $_POST['image'] ) ? sanitize_text_field( $_POST['image'] ) : false;
-
-			preg_match_all( '/^data:(?<type>.*);.*,(?<data>.*)$/', $data, $matches, PREG_PATTERN_ORDER );
-			$type = isset( $matches['type'][0] ) ? $matches['type'][0] : false;
-			$data = isset( $matches['data'][0] ) ? $matches['data'][0] : false;
-
-			/**
-			 * Filters the list mapping image mime types to their respective extensions.
-			 *
-			 * @param array $mime_to_ext Array of image mime types and their matching extensions.
-			 *
-			 * @since 3.0.0
-			 *
-			 */
-			$mime_to_ext = apply_filters(
-				'getimagesize_mimes_to_exts',
-				array(
-					'image/jpeg' => 'jpg',
-					'image/png'  => 'png',
-					'image/gif'  => 'gif',
-					'image/bmp'  => 'bmp',
-					'image/tiff' => 'tif',
-				)
-			);
-
-			$extension = false;
-			if ( isset( $mime_to_ext[ $type ] ) ) {
-				$extension = $mime_to_ext[ $type ];
-			}
-
-			if ( $type && $data && $user && $extension ) {
-
-				$filename = md5( $user . time() ) . '.' . $extension;
-				$data     = base64_decode( $data );
-
-				$upload_file = wp_upload_bits( $filename, null, $data );
-
-				if ( ! $upload_file['error'] ) {
-
-					$attachment = array(
-						'post_mime_type' => $type,
-						//'post_parent'    => $parent_post_id,
-						'post_title'     => preg_replace( '/\.[^.]+$/', '', $filename ),
-						'post_content'   => '',
-						'post_status'    => 'inherit'
-					);
-
-					$attachment_id = wp_insert_attachment( $attachment, $upload_file['file'] );
-					if ( ! is_wp_error( $attachment_id ) ) {
-						require_once( ABSPATH . "wp-admin" . '/includes/image.php' );
-						$attachment_data = wp_generate_attachment_metadata( $attachment_id, $upload_file['file'] );
-						wp_update_attachment_metadata( $attachment_id, $attachment_data );
-
-						$url = $this->get_attachment_url( $attachment_id );
-						update_user_meta( (int) $user, '_leira-avatar', $attachment_id );
-					} else {
-						//something went wrong
-					}
-				}
-			}
-
-		} else {
-			//user not logged in
-		}
-
-		$result = array(
-			'url' => $url
-		);
-		if ( $url == false ) {
-			//something went wrong
-			$result['msg']    = __( 'Something went wrong.', 'leira-avatar' );
-			$result['result'] = false;
-		} else {
-			$result['msg']    = __( 'Profile picture updated.', 'leira-avatar' );
-			$result['result'] = true;
-		}
-
-		header( "Content-Type: application/json", true );
-		echo json_encode( $result );
-		die();
-	}
-
-	/**
-	 * @param int    $attachment_id
-	 * @param string $size
-	 *
-	 * @return mixed
-	 * @deprecated
-	 */
-	function get_attachment_url( $attachment_id = 0, $size = 'thumbnail' ) {
-		$image = wp_get_attachment_image_src( (int) $attachment_id, $size );
-
-		return $image[0];
-	}
-
-	/**
-	 * Filters the url of the user profile picture
-	 *
-	 * @param $url
-	 * @param $id_or_email
-	 *
-	 * @return mixed
-	 * @since 1.0.0
-	 * @deprecated
-	 */
-	public function get_avatar_url( $url, $id_or_email ) {
-		$user_id = 0;
-
-		if ( is_numeric( $id_or_email ) ) {
-			$user_id = (int) $id_or_email;
-		} else if ( is_string( $id_or_email ) ) {
-			$user    = get_user_by( 'email', $id_or_email );
-			$user_id = $user->id;
-		} else if ( is_object( $id_or_email ) ) {
-			$user_id = $id_or_email->user_id;
-		}
-		if ( $user_id == 0 ) {
-			return $url;
-		}
-
-		$attachment_id = (int) get_user_meta( (int) $user_id, '_leira-avatar', true );
-		$image         = $this->get_attachment_url( (int) $attachment_id, 'thumbnail' );
-		if ( ! empty( $image ) ) {
-			return $url = $image;
-		}
-
-		return $url;
-
-	}
-
-	/**
-	 * Add leira avatar classes
-	 *
-	 * @param $avatar
-	 * @param $id_or_email
-	 * @param $size
-	 * @param $default
-	 * @param $alt
-	 * @param $args
+	 * @param string  $avatar      The image tag
+	 * @param mixed   $id_or_email The user
+	 * @param integer $size        The size of the image
+	 * @param boolean $default     The type of image to generate
+	 * @param string  $alt         The text to show in the alt property
+	 * @param array   $args        Array of arguments for image creation
 	 *
 	 * @return string|string[]|null
 	 */
 	public function add_avatar_class( $avatar, $id_or_email, $size, $default, $alt, $args ) {
+		/**
+		 * System forces to generate avatar with specific format.
+		 * This fix discussion settings repeated images.
+		 */
+		$force_default = isset( $args['force_default'] ) ? $args['force_default'] : false;
+		if ( $force_default ) {
+			/**
+			 * WP request an specific avatar type.
+			 * We are in Discussion setting page.
+			 */
+			return $avatar;
+		}
+
 		$pattern     = "#class='([^']*)'#";// [^\"] => match any character except ' inside class attr
 		$replacement = "class='$1 %s'";
 		$classes     = array();
 
-		if ( get_current_user_id() === $id_or_email ) {
-			$classes[] = 'leira-avatar-current-user';
-		}
-		if ( is_admin() && defined( IS_PROFILE_PAGE ) && IS_PROFILE_PAGE ) {
-			$classes[] = 'leira-avatar-current-user';
+		$user = $this->get_user_from_id_or_email( $id_or_email );
+
+		if ( $user instanceof WP_User ) {
+			$classes[] = 'leira-avatar';
+			$classes[] = 'leira-avatar-user-' . $user->ID;
+			$classes[] = 'leira-avatar-' . leira_avatar()->core->get_avatar_type( (int) $size );
 		}
 
 		if ( ! empty( $classes ) ) {
-			$classes     = array_map( 'trim', $classes );
+			$classes     = array_filter( $classes, 'trim' );
 			$classes     = array_unique( $classes );
 			$classes     = implode( ' ', $classes );
 			$replacement = sprintf( $replacement, $classes );
@@ -326,13 +193,12 @@ class Leira_Avatar_Public{
 	}
 
 	/**
-	 * Ajax upload an avatar.
+	 * Handle ajax upload avatar.
 	 *
 	 * @return string|null A JSON object containing success data if the upload succeeded
 	 *                     error message otherwise.
 	 * @since    1.0.0
 	 * @access   public
-	 *
 	 */
 	public function avatar_ajax_upload() {
 		if ( ! (bool) ( 'POST' === strtoupper( $_SERVER['REQUEST_METHOD'] ) ) ) {
@@ -356,7 +222,9 @@ class Leira_Avatar_Public{
 			$user_id = get_current_user_id();
 		}
 
-		if ( ! leira_avatar()->core->current_user_can_edit_others_avatar() ) {
+		$core = leira_avatar()->core;
+
+		if ( ! $core->current_user_can_edit_others_avatar() ) {
 			//current user can't update others avatar
 			$user_id = get_current_user_id();
 //			wp_send_json( array(
@@ -368,7 +236,7 @@ class Leira_Avatar_Public{
 		/**
 		 * Upload the image to uploads/avatars/$user_id
 		 */
-		$upload = leira_avatar()->core->upload( $_FILES, $user_id );
+		$upload = $core->upload( $_FILES, $user_id );
 
 		// In case of an error, stop the process and display a feedback to the user.
 		if ( ! empty( $upload['error'] ) ) {
@@ -379,8 +247,8 @@ class Leira_Avatar_Public{
 			) );
 		}
 
-		// Maybe resize, rotate and crop.
-		if ( ! leira_avatar()->core->generate( $user_id ) ) { //$upload['file']
+		// Generate the avatar from the provided file.
+		if ( ! $core->generate( $user_id ) ) { //$upload['file']
 			wp_send_json( array(
 				'success' => false,
 				'message' => __( 'Something went wrong while generating the avatar.', 'leira-avatar' )
@@ -393,14 +261,14 @@ class Leira_Avatar_Public{
 		wp_send_json( array(
 			'success' => true,
 			'user'    => $user_id, //The user id we set
-			'thumb'   => '', //TODO: include new image url
-			'full'    => '',
+			'full'    => $core->avatar( $user_id ),
+			'thumb'   => $core->avatar( $user_id, 'thumb' ),
 		) );
 	}
 
 
 	/**
-	 * Filter {@link get_avatar_url()} to use the BuddyPress user avatar URL.
+	 * Filter {@link get_avatar_url()} to use the user avatar URL.
 	 *
 	 * @param string $url          The URL of the avatar.
 	 * @param mixed  $id_or_email  The Gravatar to retrieve. Accepts a user_id, gravatar md5 hash,
@@ -426,6 +294,33 @@ class Leira_Avatar_Public{
 			return $url;
 		}
 
+		$user = $this->get_user_from_id_or_email( $id_or_email );
+
+		// No user, so bail.
+		if ( false === $user instanceof WP_User ) {
+			return $url;
+		}
+
+		// Use the 'full' type if size is larger than thumb's width.
+		$size = (int) $args['size'];
+
+		// Get user custom avatar URL.
+		$avatar = leira_avatar()->core->avatar( $user->ID, $size );
+		if ( ! empty( $avatar ) ) {
+			return $avatar;
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Get a WP_User object given $id_or_email parameter
+	 *
+	 * @param $id_or_email
+	 *
+	 * @return false|WP_User|null
+	 */
+	protected function get_user_from_id_or_email( $id_or_email ) {
 		$user = null;
 
 		// Ugh, hate duplicating code; process the user identifier.
@@ -445,25 +340,6 @@ class Leira_Avatar_Public{
 			$user = get_user_by( 'email', $id_or_email );
 		}
 
-		// No user, so bail.
-		if ( false === $user instanceof WP_User ) {
-			return $url;
-		}
-
-		// Use the 'full' type if size is larger than thumb's width.
-		$size = (int) $args['size'];
-		if ( (int) $args['size'] > 50 ) {
-			$size = 'full';
-		}
-
-		// Get user custom avatar URL.
-		$core = leira_avatar()->core;
-		if ( $bp_avatar = $core->avatar( $user->ID, $size ) ) {
-			return $bp_avatar;
-		}
-
-		return $url;
+		return $user;
 	}
-
-
 }

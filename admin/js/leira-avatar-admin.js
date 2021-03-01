@@ -18,7 +18,7 @@
             viewport: {
                 width: 250,
                 height: 250,
-                type: 'square'
+                type: 'circle'//circle, square
             },
             boundary: {
                 height: 500 * 2 / 3
@@ -189,13 +189,20 @@
                     processData: false,
                     contentType: false,
                 }).done(function (data, status, xhr) {
-                    //TODO: We need to update the image url
-                    //TODO: Handle error from server
                     //TODO: Handle network errors
-                    if (data.result && data.url) {
+                    if (data.success) {
                         //
                         $(window).trigger('leira-avatar.change', data);
-                        $('img.avatar.leira-avatar-current-user').attr('src', data.url).attr('srcset', data.url);
+                        $('img.avatar.leira-avatar-user-' + data.user + '.leira-avatar-full')
+                            .attr('src', data.full)
+                            .attr('srcset', data.full);
+
+                        $('img.avatar.leira-avatar-user-' + data.user + '.leira-avatar-thumb')
+                            .attr('src', data.thumb)
+                            .attr('srcset', data.full);
+                    } else {
+                        //TODO: Show error message
+                        alert(data.message);
                     }
                 }).always(function () {
                     LeiraAvatar.closeModal();

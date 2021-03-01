@@ -109,6 +109,7 @@ class Leira_Avatar_Admin{
 	 */
 	public function remove_avatar_description( $description, $user ) {
 		if ( $this->is_admin_profile_page() || $this->is_user_edit_page() ) {
+			//TODO: Translate and include aria-label and title properties
 			$description = '<button class="button button-delete" data-leira-avatar="delete">Remove</button>  ' .
 			               '<button class="button" data-leira-avatar="select">Select</button>';
 		}
@@ -125,6 +126,7 @@ class Leira_Avatar_Admin{
 	public function modal_content() {
 
 		if ( $this->is_admin_profile_page() || $this->is_user_edit_page() ) {
+			//TODO: Translate and include aria-label and title properties
 			?>
             <div id="leira-avatar-modal-container" style="display:none;">
                 <div class="leira-avatar-modal">
