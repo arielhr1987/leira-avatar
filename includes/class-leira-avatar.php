@@ -116,9 +116,9 @@ class Leira_Avatar{
 	 * with WordPress.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 */
-	private function load_dependencies() {
+	protected function load_dependencies() {
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the core plugin.
@@ -157,9 +157,9 @@ class Leira_Avatar{
 	 * Uses the Leira_Avatar_i18n class in order to set the domain and to register the hook with WordPress.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 */
-	private function set_locale() {
+	protected function set_locale() {
 
 		$plugin_i18n = new Leira_Avatar_i18n();
 		$this->get_loader()->set( 'i18n', $plugin_i18n );
@@ -171,9 +171,9 @@ class Leira_Avatar{
 	 * Register all of the hooks related to the admin area functionality of the plugin.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 */
-	private function define_admin_hooks() {
+	protected function define_admin_hooks() {
 
 		if ( is_admin() ) {
 
@@ -187,6 +187,10 @@ class Leira_Avatar{
 
 			$this->loader->add_filter( 'user_profile_picture_description', $plugin_admin, 'remove_avatar_description', 10, 2 );
 
+			$this->loader->add_action( 'admin_footer-profile.php', $plugin_admin, 'modal_content' );
+
+			$this->loader->add_action( 'admin_footer-user-edit.php', $plugin_admin, 'modal_content' );
+
 		}
 	}
 
@@ -194,9 +198,9 @@ class Leira_Avatar{
 	 * Register all of the hooks related to the public-facing functionality of the plugin.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 */
-	private function define_public_hooks() {
+	protected function define_public_hooks() {
 
 		$plugin_public = new Leira_Avatar_Public( $this->get_plugin_name(), $this->get_version() );
 
@@ -218,19 +222,16 @@ class Leira_Avatar{
 
 		//$this->loader->add_filter( 'get_avatar', $plugin_public, 'add_avatar_class', 10, 6 );
 
-		$this->loader->add_action( 'admin_footer-profile.php', $plugin_public, 'add_modal' );
+		$this->loader->add_action( 'wp_ajax_leira_avatar_upload', $plugin_public, 'avatar_ajax_upload' );
 
-		$this->loader->add_action( 'admin_footer-user-edit.php', $plugin_public, 'add_modal' );
-
-		$this->loader->add_action( 'wp_ajax_bp_avatar_upload', $plugin_public, 'bp_avatar_ajax_upload' );
-
-		$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'bp_core_get_avatar_data_url_filter', 10, 3 );
+		$this->loader->add_filter( 'get_avatar_url', $plugin_public, 'get_avatar_data_url_filter', 10, 3 );
 	}
 
 	/**
 	 * Run the loader to execute all of the hooks with WordPress.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function run() {
 
@@ -247,6 +248,7 @@ class Leira_Avatar{
 	 *
 	 * @return    string    The name of the plugin.
 	 * @since     1.0.0
+	 * @access    public
 	 */
 	public function get_plugin_name() {
 		return $this->plugin_name;
@@ -257,6 +259,7 @@ class Leira_Avatar{
 	 *
 	 * @return    Leira_Avatar_Loader    Orchestrates the hooks of the plugin.
 	 * @since     1.0.0
+	 * @access    public
 	 */
 	public function get_loader() {
 		return $this->loader;
@@ -267,6 +270,7 @@ class Leira_Avatar{
 	 *
 	 * @return    string    The version number of the plugin.
 	 * @since     1.0.0
+	 * @access    public
 	 */
 	public function get_version() {
 		return $this->version;
@@ -281,7 +285,6 @@ class Leira_Avatar{
 	 *
 	 * @since     1.0.0
 	 * @access    public
-	 *
 	 */
 	public function __get( $key ) {
 		return $this->get_loader()->get( $key );
@@ -295,10 +298,8 @@ class Leira_Avatar{
 	 *
 	 * @since     1.0.0
 	 * @access    public
-	 *
 	 */
 	public function __set( $key, $value ) {
 		$this->get_loader()->set( $key, $value );
 	}
-
 }

@@ -26,7 +26,7 @@ class Leira_Avatar_Core{
 	 *
 	 * @var string
 	 */
-	protected $action = 'bp_avatar_upload';
+	protected $action = 'leira_avatar_upload';
 
 	/**
 	 * Input file containing the image
@@ -67,6 +67,13 @@ class Leira_Avatar_Core{
 	protected $wp_upload_dir = null;
 
 	/**
+	 * The user id for which we are uploading the image
+	 *
+	 * @var null
+	 */
+	protected $user = null;
+
+	/**
 	 * The file being uploaded.
 	 *
 	 * @var array
@@ -74,32 +81,41 @@ class Leira_Avatar_Core{
 	public $attachment = array();
 
 	/**
+	 * Holds all user avatars requested
+	 *
+	 * @var array
+	 */
+	protected $cache = array();
+
+	/**
 	 * Construct Upload parameters.
 	 *
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function __construct() {
 
 		$this->max_filesize = (int) wp_max_upload_size();
 		$allowed_types      = $this->get_allowed_types();
 		$allowed_types      = array_map( 'strtoupper', $allowed_types );
-		$comma              = _x( ',', 'avatar types separator', 'buddypress' );
+		$comma              = _x( ',', 'avatar types separator', 'leira-avatar' );
 
 		$this->upload_error_strings = array(
-			0  => __( 'The file was uploaded successfully', 'buddypress' ),
-			1  => __( 'The uploaded file exceeds the maximum allowed file size for this site', 'buddypress' ),
+			0  => __( 'The file was uploaded successfully', 'leira-avatar' ),
+			1  => __( 'The uploaded file exceeds the maximum allowed file size for this site', 'leira-avatar' ),
 			/* translators: %s: Max file size for the file */
-			2  => sprintf( __( 'The uploaded file exceeds the maximum allowed file size of: %s', 'buddypress' ), size_format( $this->max_filesize ) ),
-			3  => __( 'The uploaded file was only partially uploaded.', 'buddypress' ),
-			4  => __( 'No file was uploaded.', 'buddypress' ),
+			2  => sprintf( __( 'The uploaded file exceeds the maximum allowed file size of: %s', 'leira-avatar' ), size_format( $this->max_filesize ) ),
+			3  => __( 'The uploaded file was only partially uploaded.', 'leira-avatar' ),
+			4  => __( 'No file was uploaded.', 'leira-avatar' ),
 			5  => '',
-			6  => __( 'Missing a temporary folder.', 'buddypress' ),
-			7  => __( 'Failed to write file to disk.', 'buddypress' ),
-			8  => __( 'File upload stopped by extension.', 'buddypress' ),
+			6  => __( 'Missing a temporary folder.', 'leira-avatar' ),
+			7  => __( 'Failed to write file to disk.', 'leira-avatar' ),
+			8  => __( 'File upload stopped by extension.', 'leira-avatar' ),
 			/* translators: %s: Max file size for the profile photo */
-			9  => sprintf( _x( 'That photo is too big. Please upload one smaller than %s', 'profile photo upload error', 'buddypress' ), size_format( $this->max_filesize ) ),
+			9  => sprintf( _x( 'That photo is too big. Please upload one smaller than %s', 'profile photo upload error', 'leira-avatar' ), size_format( $this->max_filesize ) ),
 			/* translators: %s: comma separated list of file types allowed for the profile photo */
-			10 => sprintf( _nx( 'Please upload only this file type: %s.', 'Please upload only these file types: %s.', count( $allowed_types ), 'profile photo upload error', 'buddypress' ), join( $comma . ' ', $allowed_types ) ),
+			10 => sprintf( _nx( 'Please upload only this file type: %s.', 'Please upload only these file types: %s.', count( $allowed_types ), 'profile photo upload error', 'leira-avatar' ), join( $comma . ' ', $allowed_types ) ),
+			11 => __( 'You most be logged in to edit your profile picture.', 'leira-avatar' ),
 		);
 
 		$this->wp_upload_dir = wp_upload_dir();
@@ -108,22 +124,34 @@ class Leira_Avatar_Core{
 	/**
 	 * Upload the avatar attachment.
 	 *
-	 * @param array       $file The appropriate entry the from $_FILES superglobal.
-	 * @param string|null $time Optional. Time formatted in 'yyyy/mm'. Default null.
+	 * @param array   $file The appropriate entry the from $_FILES superglobal.
+	 * @param integer $user The user we are going to upload the avatar for.
 	 *
 	 * @return array On success, returns an associative array of file attributes.
 	 *               On failure, returns an array containing the error message
 	 *               (eg: array( 'error' => $message ) )
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
-	public function upload( $file, $time = null ) {
+	public function upload( $file, $user ) {
+		/**
+		 * We need user id to determine the folder where the image will be uploaded
+		 */
+		$user = (int) $user;
+
+		/**
+		 * We are going to use this use in the "upload_dir_filter" filter to determine the upload folder
+		 */
+		$this->user = $user;
 
 		/**
 		 * Add custom rules before enabling the file upload
 		 */
 		add_filter( "{$this->action}_prefilter", array( $this, 'validate_upload' ), 10, 1 );
 
-		// Set Default overrides.
+		/**
+		 * Override default WP upload settings
+		 */
 		$overrides = array(
 			'action'               => $this->action,
 			'upload_error_strings' => $this->upload_error_strings,
@@ -152,7 +180,7 @@ class Leira_Avatar_Core{
 		add_filter( 'sanitize_file_name', array( $this, 'sanitize_utf8_filename' ) );
 
 		// Upload the attachment.
-		$this->attachment = wp_handle_upload( $file[ $this->file_input ], $overrides, $time );
+		$this->attachment = wp_handle_upload( $file[ $this->file_input ], $overrides );
 
 		remove_filter( 'sanitize_file_name', array( $this, 'sanitize_utf8_filename' ) );
 
@@ -172,7 +200,8 @@ class Leira_Avatar_Core{
 	 * @param array $file the temporary file attributes (before it has been moved).
 	 *
 	 * @return array the file with extra errors if needed.
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function validate_upload( $file = array() ) {
 		// Bail if already an error.
@@ -182,8 +211,11 @@ class Leira_Avatar_Core{
 		/**
 		 * Check for is logged in
 		 */
+		if ( ! is_user_logged_in() ) {
+			//$file['error'] = 11;
+		}
 
-		// File size is too big.
+		//File size is too big.
 		if ( $file['size'] > $this->max_filesize ) {
 			$file['error'] = 9;
 
@@ -206,7 +238,8 @@ class Leira_Avatar_Core{
 	/**
 	 * Include the WordPress core needed files.
 	 *
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function includes() {
 		foreach ( array_unique( $this->required_wp_files ) as $wp_file ) {
@@ -220,30 +253,27 @@ class Leira_Avatar_Core{
 
 	/**
 	 * Helper to convert utf-8 characters in filenames to their ASCII equivalent.
+	 * This method was designed to replace special characters in filename like accents to their ASCII equivalent.
+	 * We are going to use this method to handle uploads with filename that ends in "-full" or "-thumb"
+	 *
+	 * To check previous implementation refer to
+	 * wp-content/plugins/buddypress/bp-core/classes/class-bp-attachment.php#291
+	 *
 	 *
 	 * @param string $retval Filename.
 	 *
 	 * @return string
-	 * @since 2.9.0
-	 *
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function sanitize_utf8_filename( $retval ) {
-		// PHP 5.4+ or with PECL intl 2.0+
-		if ( function_exists( 'transliterator_transliterate' ) && seems_utf8( $retval ) ) {
-			$retval = transliterator_transliterate( 'Any-Latin; Latin-ASCII; [\u0080-\u7fff] remove', $retval );
+		$ext = pathinfo( $retval, PATHINFO_EXTENSION );
 
-			// Older.
-		} else {
-			// Use WP's built-in function to convert accents to their ASCII equivalent.
-			$retval = remove_accents( $retval );
-
-			// Still here? use iconv().
-			if ( function_exists( 'iconv' ) && seems_utf8( $retval ) ) {
-				$retval = iconv( 'UTF-8', 'ASCII//TRANSLIT//IGNORE', $retval );
-			}
+		if ( $ext ) {
+			$ext = ".$ext";
 		}
 
-		return $retval;
+		return uniqid() . $ext;
 	}
 
 	/**
@@ -252,11 +282,12 @@ class Leira_Avatar_Core{
 	 * @param array $upload_dir The original Uploads dir.
 	 *
 	 * @return array The upload directory data.
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function upload_dir_filter( $upload_dir = array() ) {
 
-		$user_id = get_current_user_id();
+		$user_id = $this->user;
 
 		$path      = $this->get_user_avatar_folder_dir( $user_id );
 		$newbdir   = $path;
@@ -285,7 +316,8 @@ class Leira_Avatar_Core{
 	 * Get allowed avatar types.
 	 *
 	 * @return array
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function get_allowed_types() {
 		/**
@@ -315,7 +347,8 @@ class Leira_Avatar_Core{
 	 * Get allowed avatar mime types.
 	 *
 	 * @return array List of allowed mime types.
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function get_allowed_mimes() {
 		$allowed_types = $this->get_allowed_types();
@@ -335,13 +368,19 @@ class Leira_Avatar_Core{
 
 	/**
 	 * Generate the avatar from image file.
+	 * In order to use this method you need first to upload the FILE via $this->upload()
 	 *
-	 * @param string $file The absolute path to the file.
+	 * @param integer $user The user id we are generating the avatar for.
+	 * @param string  $file The absolute path to the file.
+	 *                      If not provided, the uploaded file via $this->upload() will be use
 	 *
 	 * @return false|string|WP_Image_Editor|WP_Error
-	 * @since 1.0.0
+	 * @since    1.0.0
+	 * @access   public
 	 */
-	public function generate( $file = '' ) {
+	public function generate( $user, $file = '' ) {
+
+		$user = (int) $user;
 
 		if ( ! file_exists( $file ) ) {
 			if ( isset( $this->attachment['file'] ) ) {
@@ -371,7 +410,7 @@ class Leira_Avatar_Core{
 		/**
 		 * delete previous avatar
 		 */
-		$this->delete();
+		$this->delete( $user );
 
 		/**
 		 * Start edition process
@@ -416,17 +455,28 @@ class Leira_Avatar_Core{
 
 		}
 
-		$avatar_sizes      = array(
-			'full'  => 150,
-			'thumb' => 50
+		$avatar_sizes = array(
+			'full'  => $this->get_avatar_size( 'full' ),
+			'thumb' => $this->get_avatar_size( 'thumb' )
 		);
-		$ext               = $avatar_data['mime'] == 'image/png' ? 'png' : 'jpg';
-		$avatar_folder_dir = $this->get_user_avatar_folder_dir();
+
+		/**
+		 * Save the image as png always
+		 */
+		$mime              = $avatar_data['mime'];
+		$ext               = $mime == 'image/png' ? 'png' : 'jpg';
+		$mime              = 'image/png';
+		$ext               = 'png';
+		$avatar_folder_dir = $this->get_user_avatar_folder_dir( $this->user );
 		foreach ( $avatar_sizes as $suffix => $size ) {
+			/**
+			 * Important, images cant be resized to a larger scale.
+			 * If provided image is smaller thant the resize image, no resize will happen.
+			 */
 			$resized  = $editor->resize( $size, $size );
-			$filename = wp_unique_filename( $avatar_folder_dir, uniqid() . "-bp{$suffix}.{$ext}" );
+			$filename = wp_unique_filename( $avatar_folder_dir, uniqid() . "-{$suffix}.{$ext}" );
 			$dest     = $avatar_folder_dir . '/' . $filename;
-			$saved    = $editor->save( $dest );
+			$saved    = $editor->save( $dest, $mime );
 		}
 
 		//we need to unlink the file
@@ -442,8 +492,8 @@ class Leira_Avatar_Core{
 	 *
 	 * @return bool|array   An associate array containing the width, height and metadatas.
 	 *                      False in case an important image attribute is missing.
-	 * @since 1.0.0
-	 *
+	 * @since    1.0.0
+	 * @access   protected
 	 */
 	protected function get_image_metadata( $file ) {
 		// Try to get image basic data.
@@ -488,13 +538,13 @@ class Leira_Avatar_Core{
 	/**
 	 * Deletes user avatar
 	 *
-	 * @param string $user_id The user id you want to delete avatar.
-	 *                        If no user id is provided, current user id will be use
+	 * @param integer $user_id The user id you want to delete avatar.
 	 *
 	 * @return bool
-	 * @since 1.0.0
+	 * @access   public
+	 * @since    1.0.0
 	 */
-	public function delete( $user_id = '' ) {
+	public function delete( $user_id ) {
 		/**
 		 * Filters whether or not to handle deleting an existing avatar.
 		 *
@@ -505,12 +555,8 @@ class Leira_Avatar_Core{
 		if ( ! apply_filters( 'leira_avatar_pre_delete_existing_avatar', true ) ) {
 			return true;
 		}
-		if ( empty( $user_id ) ) {
-			if ( ! get_current_user_id() ) {
-				return false;
-			}
-			$user_id = get_current_user_id();
-		}
+
+		$user_id = (int) $user_id;
 
 		/**
 		 * User avatar folder dir
@@ -522,7 +568,7 @@ class Leira_Avatar_Core{
 
 		if ( $av_dir = opendir( $avatar_folder_dir ) ) {
 			while( false !== ( $avatar_file = readdir( $av_dir ) ) ){
-				if ( ( preg_match( "/-bpfull/", $avatar_file ) || preg_match( "/-bpthumb/", $avatar_file ) ) && '.' != $avatar_file && '..' != $avatar_file ) {
+				if ( ( preg_match( "/-full/", $avatar_file ) || preg_match( "/-thumb/", $avatar_file ) ) && '.' != $avatar_file && '..' != $avatar_file ) {
 					@unlink( $avatar_folder_dir . '/' . $avatar_file );
 				}
 			}
@@ -540,36 +586,53 @@ class Leira_Avatar_Core{
 		 */
 		do_action( 'leira_avatar_delete_existing_avatar', $user_id );
 
+		/**
+		 * Remove from cache
+		 */
+		unset( $this->cache[ $user_id ] );
+
 		return true;
 	}
 
 	/**
 	 * Get the avatar url for a give user
 	 *
-	 * @param string $user_id
-	 * @param string $size
+	 * @param integer        $user_id The user you wan to get the avatar
+	 * @param string|integer $size    The size of the avatar you want to get.
+	 *                                There are two possible values "full" or "thumb".
+	 *                                If you provide an integer value the system will determine the best image to return
 	 *
-	 * @return mixed|string|void
+	 * @return string The user avatar url for the given size or an empty string if not found
+	 * @access   public
+	 * @since 1.0.0
 	 */
 	public function avatar( $user_id = '', $size = 'full' ) {
-		if ( empty( $user_id ) ) {
-			if ( ! get_current_user_id() ) {
-				return '';
-			}
-			$user_id = get_current_user_id();
+
+		$user_id = (int) $user_id ? (int) $user_id : get_current_user_id();
+		if ( ! $user_id ) {
+			return '';
 		}
 
 		//validate size
 		if ( is_integer( $size ) ) {
-			$size = $size > 50 ? 'full' : 'thumb';
+			$size = $size > $this->get_avatar_size( 'thumb' ) ? 'full' : 'thumb';
+		}
+		$size = strtolower( $size );
+		$size = $size == 'full' ? 'full' : 'thumb';
+
+		/**
+		 * Check if cached
+		 */
+		if ( isset( $this->cache[ $user_id ][ $size ] ) ) {
+			return $this->cache[ $user_id ][ $size ];
 		}
 
 		$avatar_folder_dir = $this->get_user_avatar_folder_dir( $user_id );
 		$avatar_folder_url = $this->get_user_avatar_folder_url( $user_id );
-		$avatar_size       = ( 'full' == $size ) ? '-bpfull' : '-bpthumb';
+		$avatar_size       = "-$size";
 		$avatar_url        = '';
 
-		if(file_exists($avatar_folder_dir)){
+		if ( file_exists( $avatar_folder_dir ) ) {
 			// Open directory.
 			if ( $av_dir = opendir( $avatar_folder_dir ) ) {
 
@@ -598,7 +661,33 @@ class Leira_Avatar_Core{
 			closedir( $av_dir );
 		}
 
-		return apply_filters( 'leira_avatar_user_avatar_url', $avatar_url );
+		/**
+		 * Filter the size user avatar url
+		 */
+		$avatar_url = apply_filters( 'leira_avatar_user_avatar_url', $avatar_url );
+
+		/**
+		 * Lets cache the user avatar to avoid too many file access operations
+		 */
+		$this->cache[ $user_id ][ $size ] = $avatar_url;
+
+		return $avatar_url;
+	}
+
+	/**
+	 * Determine if the give user has an avatar set
+	 *
+	 * @param integer $user The user to check if has avatar
+	 *
+	 * @return bool
+	 * @since 1.0.0
+	 */
+	public function has_avatar( $user ) {
+		$full  = $this->avatar( $user );
+		$thumb = $this->avatar( $user, 'thumb' );
+
+		return ! empty( $full ) && ! empty( $thumb );
+
 	}
 
 
@@ -606,6 +695,8 @@ class Leira_Avatar_Core{
 	 * Get the path to uploads directory
 	 *
 	 * @return string
+	 * @access   public
+	 * @since 1.0.0
 	 */
 	public function get_uploads_dir() {
 		$dir = '';
@@ -621,6 +712,8 @@ class Leira_Avatar_Core{
 	 * Get URL path to uploads directory
 	 *
 	 * @return string
+	 * @access   public
+	 * @since 1.0.0
 	 */
 	public function get_uploads_url() {
 		$url = '';
@@ -643,6 +736,8 @@ class Leira_Avatar_Core{
 	 * @param string|int $user_id User id
 	 *
 	 * @return string
+	 * @access   public
+	 * @since 1.0.0
 	 */
 	public function get_user_avatar_folder_dir( $user_id = '' ) {
 
@@ -657,6 +752,8 @@ class Leira_Avatar_Core{
 	 * @param string|int $user_id User id
 	 *
 	 * @return string
+	 * @access   public
+	 * @since 1.0.0
 	 */
 	public function get_user_avatar_folder_url( $user_id ) {
 
@@ -666,19 +763,16 @@ class Leira_Avatar_Core{
 	}
 
 	/**
-	 * Get subdirectory path to user avatar "avatars/user_id/";
+	 * Get subdirectory path to user avatar "uploads/avatars/user_id/";
 	 *
 	 * @param string|int $user_id User id
 	 *
 	 * @return string
+	 * @access   protected
+	 * @since 1.0.0
 	 */
 	protected function get_user_avatar_subdir( $user_id ) {
-		if ( empty( $user_id ) ) {
-			if ( ! get_current_user_id() ) {
-				return '';
-			}
-			$user_id = get_current_user_id();
-		}
+		$user_id = (int) $user_id;
 
 		$directory = $this->get_avatars_dir_name();
 
@@ -689,9 +783,48 @@ class Leira_Avatar_Core{
 	 * Get avatars upload folder name. Default "avatars"
 	 *
 	 * @return string
+	 * @access   public
+	 * @since    1.0.0
 	 */
 	public function get_avatars_dir_name() {
 		return apply_filters( 'leira_avatar_upload_dir_name', 'avatars' );
+	}
+
+	/**
+	 * Get the size in pixels for the avatar
+	 *
+	 * @param string $size [full|thumb]
+	 *
+	 * @return integer The size in pixels for the given $size
+	 * @since 1.0.0
+	 */
+	public function get_avatar_size( $size ) {
+
+		$size         = strtolower( $size );
+		$size         = $size == 'full' ? 'full' : 'thumb';
+		$avatar_sizes = array(
+			'full'  => 150,
+			'thumb' => 50
+		);
+		$value        = $avatar_sizes[ $size ];
+
+		return apply_filters( "leira_avatar_get_{$size}_image_size", $value );
+	}
+
+	/**
+	 * Determine if current user can edit others avatar
+	 *
+	 * @return bool
+	 * @access   public
+	 * @since    1.0.0
+	 */
+	public function current_user_can_edit_others_avatar() {
+		return current_user_can( 'edit_users' ) ||
+		       ( is_multisite() && (
+				       current_user_can( 'manage_network_users' ) ||
+				       apply_filters( 'enable_edit_any_user_configuration', true )
+			       )
+		       );
 	}
 
 }

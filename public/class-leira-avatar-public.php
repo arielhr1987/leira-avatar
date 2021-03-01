@@ -47,6 +47,7 @@ class Leira_Avatar_Public{
 	 * @param string $version     The version of this plugin.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function __construct( $plugin_name, $version ) {
 
@@ -59,6 +60,7 @@ class Leira_Avatar_Public{
 	 * Register the stylesheets for the public-facing side of the site.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function enqueue_styles() {
 
@@ -82,6 +84,7 @@ class Leira_Avatar_Public{
 	 * Register the JavaScript for the public-facing side of the site.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function enqueue_scripts() {
 
@@ -104,6 +107,9 @@ class Leira_Avatar_Public{
 
 	/**
 	 * Render modal
+	 *
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function add_modal() {
 		?>
@@ -139,6 +145,8 @@ class Leira_Avatar_Public{
 
 	/**
 	 * Save the image to attachment and add it to the user metadata
+	 *
+	 * @deprecated
 	 */
 	public function save_avatar() {
 		$url = false;
@@ -239,6 +247,7 @@ class Leira_Avatar_Public{
 	 * @param string $size
 	 *
 	 * @return mixed
+	 * @deprecated
 	 */
 	function get_attachment_url( $attachment_id = 0, $size = 'thumbnail' ) {
 		$image = wp_get_attachment_image_src( (int) $attachment_id, $size );
@@ -254,6 +263,7 @@ class Leira_Avatar_Public{
 	 *
 	 * @return mixed
 	 * @since 1.0.0
+	 * @deprecated
 	 */
 	public function get_avatar_url( $url, $id_or_email ) {
 		$user_id = 0;
@@ -320,130 +330,72 @@ class Leira_Avatar_Public{
 	 *
 	 * @return string|null A JSON object containing success data if the upload succeeded
 	 *                     error message otherwise.
-	 * @since 2.3.0
+	 * @since    1.0.0
+	 * @access   public
 	 *
 	 */
-	function bp_avatar_ajax_upload() {
-		$t = 0;
+	public function avatar_ajax_upload() {
 		if ( ! (bool) ( 'POST' === strtoupper( $_SERVER['REQUEST_METHOD'] ) ) ) {
-			wp_die();
+			wp_send_json( array(
+				'success' => false,
+				'message' => __( 'Invalid request, please refresh the page and try again', 'leira-avatar' )
+			) );
 		}
 
-		// Check the nonce.
-		//check_admin_referer( 'bp-uploader' );
+		//Check the nonce.
+		if ( ! check_ajax_referer( 'update-user_' . get_current_user_id(), false, false ) ) {
+			wp_send_json( array(
+				'success' => false,
+				'message' => __( 'Invalid request, please refresh the page and try again', 'leira-avatar' )
+			) );
+		}
 
-		$upload = leira_avatar()->core->upload( $_FILES );
+		$user_id = isset( $_REQUEST['user'] ) ? $_REQUEST['user'] : false;
+		$user_id = (int) sanitize_text_field( $user_id );
+		if ( ! $user_id ) {
+			$user_id = get_current_user_id();
+		}
+
+		if ( ! leira_avatar()->core->current_user_can_edit_others_avatar() ) {
+			//current user can't update others avatar
+			$user_id = get_current_user_id();
+//			wp_send_json( array(
+//				'success' => false,
+//				'message' => __( 'You can\'t edit other user avatar', 'leira-avatar' )
+//			) );
+		}
+
+		/**
+		 * Upload the image to uploads/avatars/$user_id
+		 */
+		$upload = leira_avatar()->core->upload( $_FILES, $user_id );
 
 		// In case of an error, stop the process and display a feedback to the user.
 		if ( ! empty( $upload['error'] ) ) {
 			/* translators: %s: the upload error message */
-			//bp_core_add_message( sprintf( __( 'Upload Failed! Error was: %s', 'buddypress' ), $upload['error'] ), 'error' );
-
-			return false;
+			wp_send_json( array(
+				'success' => false,
+				'message' => sprintf( __( 'Upload Failed! Error was: %s', 'leira-avatar' ), $upload['error'] )
+			) );
 		}
 
-		// Maybe resize.
-		leira_avatar()->core->generate();
+		// Maybe resize, rotate and crop.
+		if ( ! leira_avatar()->core->generate( $user_id ) ) { //$upload['file']
+			wp_send_json( array(
+				'success' => false,
+				'message' => __( 'Something went wrong while generating the avatar.', 'leira-avatar' )
+			) );
+		}
 
-		return;
-//		$bp->avatar_admin->original = $avatar_attachment->upload( $file, $upload_dir_filter );
-//
-//		// Init the BuddyPress parameters.
-//		$bp_params = array();
-//
-//		// We need it to carry on.
-//		if ( ! empty( $_POST['bp_params'] ) ) {
-//			$bp_params = $_POST['bp_params'];
-//		} else {
-//			wp_send_json_error();
-//		}
-//
-//		$bp                             = buddypress();
-//		$bp_params['upload_dir_filter'] = '';
-//		$needs_reset                    = array();
-//
-//		if ( 'user' === $bp_params['object'] ) {
-//			$bp_params['upload_dir_filter'] = 'bp_members_avatar_upload_dir';
-//
-//			if ( ! bp_displayed_user_id() && ! empty( $bp_params['item_id'] ) ) {
-//				$needs_reset            = array( 'key' => 'displayed_user', 'value' => $bp->displayed_user );
-//				$bp->displayed_user->id = $bp_params['item_id'];
-//			}
-//		}
-//
-//		if ( ! isset( $bp->avatar_admin ) ) {
-//			$bp->avatar_admin = new stdClass();
-//		}
-//
-//		/**
-//		 * The BuddyPress upload parameters is including the Avatar UI Available width,
-//		 * add it to the avatar_admin global for a later use.
-//		 */
-//		if ( isset( $bp_params['ui_available_width'] ) ) {
-//			$bp->avatar_admin->ui_available_width = (int) $bp_params['ui_available_width'];
-//		}
-//
-//		// Upload the avatar.
-//		$avatar = bp_core_avatar_handle_upload( $_FILES, $bp_params['upload_dir_filter'] );
-//
-//		// Reset objects.
-//		if ( ! empty( $needs_reset ) ) {
-//			if ( ! empty( $needs_reset['component'] ) ) {
-//				$bp->{$needs_reset['component']}->{$needs_reset['key']} = $needs_reset['value'];
-//			} else {
-//				$bp->{$needs_reset['key']} = $needs_reset['value'];
-//			}
-//		}
-//
-//		// Init the feedback message.
-//		$feedback_message = false;
-//
-//		if ( ! empty( $bp->template_message ) ) {
-//			$feedback_message = $bp->template_message;
-//
-//			// Remove template message.
-//			$bp->template_message      = false;
-//			$bp->template_message_type = false;
-//
-//			@setcookie( 'bp-message', false, time() - 1000, COOKIEPATH, COOKIE_DOMAIN, is_ssl() );
-//			@setcookie( 'bp-message-type', false, time() - 1000, COOKIEPATH, COOKIE_DOMAIN, is_ssl() );
-//		}
-//
-//		if ( empty( $avatar ) ) {
-//			// Default upload error.
-//			$message = __( 'Upload failed.', 'buddypress' );
-//
-//			// Use the template message if set.
-//			if ( ! empty( $feedback_message ) ) {
-//				$message = $feedback_message;
-//			}
-//
-//			// Upload error reply.
-//			bp_attachments_json_response( false, $is_html4, array(
-//				'type'    => 'upload_error',
-//				'message' => $message,
-//			) );
-//		}
-//
-//		if ( empty( $bp->avatar_admin->image->file ) ) {
-//			bp_attachments_json_response( false, $is_html4 );
-//		}
-//
-//		$uploaded_image = @getimagesize( $bp->avatar_admin->image->file );
-//
-//		// Set the name of the file.
-//		$name       = $_FILES['file']['name'];
-//		$name_parts = pathinfo( $name );
-//		$name       = trim( substr( $name, 0, - ( 1 + strlen( $name_parts['extension'] ) ) ) );
-//
-//		// Finally return the avatar to the editor.
-//		bp_attachments_json_response( true, $is_html4, array(
-//			'name'     => $name,
-//			'url'      => $bp->avatar_admin->image->url,
-//			'width'    => $uploaded_image[0],
-//			'height'   => $uploaded_image[1],
-//			'feedback' => $feedback_message,
-//		) );
+		/**
+		 * Avatar was generated correctly
+		 */
+		wp_send_json( array(
+			'success' => true,
+			'user'    => $user_id, //The user id we set
+			'thumb'   => '', //TODO: include new image url
+			'full'    => '',
+		) );
 	}
 
 
@@ -459,7 +411,7 @@ class Leira_Avatar_Public{
 	 * @since 2.9.0
 	 *
 	 */
-	public function bp_core_get_avatar_data_url_filter( $url, $id_or_email, $args ) {
+	public function get_avatar_data_url_filter( $url, $id_or_email, $args ) {
 
 		/**
 		 * System forces to generate avatar with specific format.

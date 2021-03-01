@@ -26,19 +26,19 @@ class Leira_Avatar_Admin{
 	 * The ID of this plugin.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 * @var      string $plugin_name The ID of this plugin.
 	 */
-	private $plugin_name;
+	protected $plugin_name;
 
 	/**
 	 * The version of this plugin.
 	 *
 	 * @since    1.0.0
-	 * @access   private
+	 * @access   protected
 	 * @var      string $version The current version of this plugin.
 	 */
-	private $version;
+	protected $version;
 
 	/**
 	 * Initialize the class and set its properties.
@@ -47,6 +47,7 @@ class Leira_Avatar_Admin{
 	 * @param string $version     The version of this plugin.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function __construct( $plugin_name, $version ) {
 
@@ -59,16 +60,16 @@ class Leira_Avatar_Admin{
 	 * Register the stylesheets for the admin area.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function enqueue_styles( $page ) {
 
 		/**
 		 * Load croppie css
 		 */
-
 		if ( $page === 'profile.php' || $page === 'user-edit.php' ) {
 			wp_enqueue_style( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.css', array(), $this->version, 'all' );
-			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array('jcrop'), $this->version, 'all' );
+			wp_enqueue_style( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'css/leira-avatar-admin.css', array(), $this->version, 'all' );
 		}
 	}
 
@@ -76,6 +77,7 @@ class Leira_Avatar_Admin{
 	 * Register the JavaScript for the admin area.
 	 *
 	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function enqueue_scripts( $page ) {
 
@@ -84,9 +86,13 @@ class Leira_Avatar_Admin{
 		 */
 
 		if ( $page === 'profile.php' || $page === 'user-edit.php' ) {
-			//add_thickbox();
+			add_thickbox();
 			wp_enqueue_script( $this->plugin_name . '_croppie', plugin_dir_url( __FILE__ ) . '../public/js/node_modules/croppie/croppie.min.js', array( 'jquery' ), $this->version, false );
-			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery', 'jcrop' ), $this->version, false );
+			wp_enqueue_script( $this->plugin_name . '_admin', plugin_dir_url( __FILE__ ) . 'js/leira-avatar-admin.js', array( 'jquery' ), $this->version, false );
+			wp_add_inline_script( $this->plugin_name . '_admin', sprintf( 'var LeiraAvatarNonce = "%s";', wp_create_nonce( 'update-user_' . get_current_user_id() ) ) );
+			wp_localize_script( $this->plugin_name . '_admin_localization', 'LeiraAvatarL10N', array(
+				'some_string' => __( 'Some string to translate', 'leira-avatar' ),
+			) );
 		}
 
 	}
@@ -98,18 +104,71 @@ class Leira_Avatar_Admin{
 	 * @param WP_User $user
 	 *
 	 * @return string
+	 * @since    1.0.0
+	 * @access   public
 	 */
 	public function remove_avatar_description( $description, $user ) {
-		if ( defined( 'IS_PROFILE_PAGE' ) && IS_PROFILE_PAGE ) {
-			$description = '';
-			$description = sprintf(
-			/* translators: %s: Gravatar URL. */
-				__( '<a href="javascript:void(0);" class="" onclick="alert()">Change</a>.' ),
-				__( '?modal=false&TB_inline&inlineId=profile-page' )
-			);
+		if ( $this->is_admin_profile_page() || $this->is_user_edit_page() ) {
+			$description = '<button class="button button-delete" data-leira-avatar="delete">Remove</button>  ' .
+			               '<button class="button" data-leira-avatar="select">Select</button>';
 		}
 
 		return $description;
+	}
+
+	/**
+	 * Add modal content to page
+	 *
+	 * @since    1.0.0
+	 * @access   public
+	 */
+	public function modal_content() {
+
+		if ( $this->is_admin_profile_page() || $this->is_user_edit_page() ) {
+			?>
+            <div id="leira-avatar-modal-container" style="display:none;">
+                <div class="leira-avatar-modal">
+                    <div>
+                        <div id="leira-avatar-croppie"></div>
+                        <input id="leira-avatar-uploader" type="file" accept="image/*" style="display: none">
+                    </div>
+                    <div class="leira-avatar-modal-footer">
+                        <button class="button" data-leira-avatar="close">Cancel</button>
+                        <!--<button class="button" data-leira-avatar="select">Other</button>-->
+                        <button class="button button-primary" data-leira-avatar="save">Apply</button>
+                    </div>
+                </div>
+            </div>
+			<?php
+		}
+	}
+
+	/**
+	 * Determine if we are in the current user admin profile page
+	 *
+	 * @return bool
+	 * @since    1.0.0
+	 * @access   public
+	 */
+	public function is_admin_profile_page() {
+		return is_admin() && defined( 'IS_PROFILE_PAGE' ) && IS_PROFILE_PAGE;
+	}
+
+	/**
+	 * Determine if we are editing a user in admin area
+	 *
+	 * @return bool
+	 * @since    1.0.0
+	 * @access   public
+	 */
+	public function is_user_edit_page() {
+		$res = false;
+		if ( function_exists( 'get_current_screen' ) ) {
+			$screen = get_current_screen();
+			$res    = isset( $screen->id ) && $screen->id == 'user-edit';
+		}
+
+		return $res;
 	}
 
 }
