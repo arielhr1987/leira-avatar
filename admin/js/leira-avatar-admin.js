@@ -46,13 +46,6 @@
         height: 360,
 
         /**
-         * Check if bootstrap is installed in the page.
-         */
-        isBootstrapDefined: function () {
-            return typeof window.bootstrap !== 'undefined';
-        },
-
-        /**
          *
          */
         init: function () {
@@ -134,7 +127,7 @@
          */
         readFile: function (input) {
 
-            // TODO: format is correct
+            // TODO: check format is correct
             if (input.files && input.files[0]) {
                 LeiraAvatar.file = input.files[0];
                 var reader = new FileReader();
